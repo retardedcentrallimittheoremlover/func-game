@@ -1,0 +1,108 @@
+--Design
+data Position = Position { px :: Float, py :: Float } deriving (Show, Eq) 
+ 
+
+data Player = Player 
+{ playerPosition :: Position
+, playerLives :: Int 
+, playerActivePowerUp :: Maybe PowerUpType 
+, playerPowerUpTimer :: Float 
+, playerFireCooldown :: Float
+} deriving (Show) 
+
+data Enemy = Enemy 
+{ enemyPosition :: Position
+, enemyVelocity :: Float 
+, enemySize :: EnemySize 
+, enemySpeed :: Float
+} deriving (Show) 
+
+data Bullet = Bullet 
+{ bulletPosition :: Position
+, bulletVelocity :: Float  
+} deriving (Show) 
+
+data PowerUpType = Shield | RapidFire deriving(Eq, Show, Enum, Bounded)  
+
+data PowerUp = PowerUp
+{ powerUpType :: PowerUpType
+, powerUpPosition :: Position 
+, powerUpLifeTime :: Float
+} deriving (Show) 
+
+data Difficulty = Difficulty1 | Difficulty2 | Difficulty3 deriving(Show)  
+
+--Gamestate
+
+data Screen = Menu | Playing deriving (Eq, Show)
+
+data GameState = GameState
+{ player :: Player
+, enemies :: [Enemy]
+, bullets :: [Bullet] 
+, powerUps :: [PowerUp] 
+, score :: Int 
+, level :: Int 
+, gameTime :: Float
+, spawnTimer :: Float 
+, powerUpSpawnTimer :: Float 
+, isPaused :: Bool 
+, difficulty :: Difficulty 
+, highScores :: [Int] 
+, randomGenerator :: StdGen
+, config :: GameConfig
+, keyUpDown :: Bool
+, keyDownDown :: Bool
+, keyShootDown :: Bool
+, screen :: Screen
+} deriving (Show) 
+
+data GameConfig = GameConfig
+{ enemySpawnRate :: Float --seconds between spawns
+, powerUpSpawnChance :: Float --0..1 chance to spawn 
+} deriving (Show) 
+
+--Minimal Requirements 
+
+--Player 
+inputKey :: Event -> GameState -> GameState 
+
+--Menu, choose difficulty  
+inputKey (EventKey (Char '1') Down _ _) gs | screen gs == Menu = 
+startGameWithDifficulty "1" gs 
+
+inputKey (EventKey (Char '2') Down _ _) gs | screen gs == Menu = 
+startGameWithDifficulty "2" gs 
+
+inputKey (EventKey (Char '3') Down _ _) gs | screen gs == Menu = 
+startGameWithDifficulty "3" gs 
+
+--In game 
+--Key down
+inputKey(EventKey (SpecialKey KeyUp) Down _ _) gs = gs { keyUpDown = True }
+
+inputKey(EventKey (SpecialKey KeyDown) Down _ _) gs = gs { keyDownDown = True}
+
+inputKey(EventKey (SpecialKey KeySpace) Down _ _) gs = gs { keyShootDown = True }
+
+--Key up
+inputKey(EventKey (SpecialKey KeyUp) Down _ _) gs = gs { keyUpDown = False }
+
+inputKey(EventKey (SpecialKey KeyDown) Down _ _) gs = gs { keyDownDown = False } 
+
+inputKey(EventKey (SpecialKey KeySpace) Down _ _) gs = gs { keyShootDown = False }
+
+--Pause the game 
+inputKey (EventKey (Char 'p') Down _ _) gs
+    | screen gs == Playing = gs { isPaused = not (isPaused gs) }
+    | otherwise = gs 
+
+--Return to menu 
+inputKey (EventKey (Char 'm') Down _ _) gs = gs { screen = Menu, isPaused = True }
+
+inputKey _ gs = gs 
+
+--Enemies 
+updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen)
+
+
