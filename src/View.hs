@@ -9,7 +9,7 @@ view :: GameState -> IO Picture
 view = return . viewPure
 
 viewPure :: GameState -> Picture
-viewPure gstate = case infoToShow gstate of
-  ShowNothing   -> blank
-  ShowANumber n -> color green (text (show n))
-  ShowAChar   c -> color green (text [c])
+viewPure gstate = translate x y $ color cyan $
+                  polygon [(-20,-15), (20,0), (-20,15)]
+                  where 
+                  Position x y = playerPosition gstate 

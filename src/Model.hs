@@ -9,10 +9,18 @@ data InfoToShow = ShowNothing
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 5
 
+data Position = Position { px :: Float, py :: Float} 
+
+
 data GameState = GameState {
-                   infoToShow  :: InfoToShow
-                 , elapsedTime :: Float
+                 playerPosition :: Position 
+                 , keyUpDown    :: Bool
+                 , keyDownDown  :: Bool 
                  }
 
 initialState :: GameState
-initialState = GameState ShowNothing 0
+initialState = GameState { 
+               playerPosition = Position (-300) 0 
+               , keyUpDown = False 
+               , keyDownDown = False
+               }
