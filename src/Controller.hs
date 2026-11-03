@@ -10,10 +10,15 @@ import System.Random
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate = return (gstate { player = movePlayer secs p' }) 
+step secs gstate = return (gstate'' { player = movePlayer secs p'
+                                    , bullets = applyBullet secs bs  
+                                    }) 
             where 
             p  = player gstate 
             p' = p { playerVelocity = Vector1 (playerdir gstate) } 
+            bs = bullets $ bulletlist gstate' 
+            gstate' = gstate { coolDown = max 0 (coolDown gstate - secs) }
+            gstate'' = bulletlist gstate' 
 
 -- | Move player function 
 movePlayer :: Float -> Player -> Player  
@@ -75,8 +80,11 @@ moveBullet secs b =
             in b { bulletPosition = bpos, bulletLifetime = blife } 
 
 bulletlist :: GameState -> GameState  
-bulletlist gs | keySpaceDown gs = gs { bullets = b : bullets gs }  
-              | otherwise       = gs { bullets = bullets gs }  
+bulletlist gs | keySpaceDown gs && (coolDown gs <= 0) = gs { bullets = b : bullets gs, coolDown = 0.2 }  
+              | otherwise       = gs   
            where 
-           b = spawnBullet (player gs) 0  
+           b = spawnBullet (player gs) 2  
+
+applyBullet :: Float -> [Bullet] -> [Bullet] 
+applyBullet secs bs = filter (\b -> bulletLifetime b >= 0) $ map (moveBullet secs) bs 
 

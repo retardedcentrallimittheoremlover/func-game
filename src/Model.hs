@@ -29,6 +29,7 @@ data GameState = GameState {
                  , keyDownDown  :: Bool 
                  , keySpaceDown :: Bool 
                  , bullets      :: [Bullet] 
+                 , coolDown     :: Float 
                  }
 
 defaultPlayer :: Player 
@@ -46,4 +47,5 @@ initialState = GameState {
                , keyDownDown = False
                , keySpaceDown = False 
                , bullets = [] 
+               , coolDown = 0
                }

@@ -9,8 +9,17 @@ view :: GameState -> IO Picture
 view = return . viewPure
 
 viewPure :: GameState -> Picture
-viewPure gstate = translate x y $ color cyan $
-                  polygon [(-20,-15), (20,0), (-20,15)]
-                  where 
-                  Position x y = playerPosition p  
-                  p = player gstate  
+viewPure gstate = pictures (p : bs) 
+                where 
+                p = drawPlayer $ player gstate  
+                bs = map drawBullet $ bullets gstate  
+
+drawPlayer :: Player -> Picture 
+drawPlayer p = let 
+               Position x y = playerPosition p 
+               in translate x y $ color cyan $ polygon [(-20,-15), (20,0), (-20,15)]
+
+drawBullet :: Bullet -> Picture 
+drawBullet b = let 
+               Position x y = bulletPosition b 
+               in translate x y $ color yellow $ circleSolid 8 
