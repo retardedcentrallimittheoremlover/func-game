@@ -50,5 +50,33 @@ inputKey (EventKey (SpecialKey KeyDown) Down _ _) gs =
 inputKey (EventKey (SpecialKey KeyDown) Up _ _) gs = 
     gs { keyDownDown = False } 
 
+--Spacebar 
+inputKey (EventKey (SpecialKey KeySpace) Down _ _) gs = 
+    gs { keySpaceDown = True } 
+
+inputKey (EventKey (SpecialKey KeySpace) Up _ _) gs = 
+    gs { keySpaceDown = False } 
+
 inputKey _ gstate = gstate -- Otherwise keep the same
+
+--Bullets 
+spawnBullet :: Player -> Float -> Bullet 
+spawnBullet p f =
+            let Position x y    = playerPosition p 
+                bv              = Vector2 bulletSpeed 0     
+            in Bullet (Position x y) bv f  
+
+moveBullet :: Float -> Bullet -> Bullet 
+moveBullet secs b = 
+            let Position x y    = bulletPosition b 
+                Vector2 vx0 vy0 = bulletVelocity b 
+                bpos            = Position (x + vx0 * secs) (y + vy0 * secs)
+                blife           = bulletLifetime b - secs 
+            in b { bulletPosition = bpos, bulletLifetime = blife } 
+
+bulletlist :: GameState -> GameState  
+bulletlist gs | keySpaceDown gs = gs { bullets = b : bullets gs }  
+              | otherwise       = gs { bullets = bullets gs }  
+           where 
+           b = spawnBullet (player gs) 0  
 
