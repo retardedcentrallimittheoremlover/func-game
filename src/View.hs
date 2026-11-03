@@ -12,4 +12,5 @@ viewPure :: GameState -> Picture
 viewPure gstate = translate x y $ color cyan $
                   polygon [(-20,-15), (20,0), (-20,15)]
                   where 
-                  Position x y = playerPosition gstate 
+                  Position x y = playerPosition p  
+                  p = player gstate  

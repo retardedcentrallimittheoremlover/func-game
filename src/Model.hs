@@ -9,18 +9,35 @@ data InfoToShow = ShowNothing
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 5
 
+data Vector1 = Vector1 { vy :: Float } 
+
 data Position = Position { px :: Float, py :: Float} 
 
+data Bullet = Bullet { bulletPosition :: Position
+                     , bulletVelocity :: Float 
+                     }
+
+data Player = Player { playerPosition :: Position
+                     , playerVelocity :: Vector1
+                     }
 
 data GameState = GameState {
-                 playerPosition :: Position 
+                   player       :: Player  
                  , keyUpDown    :: Bool
                  , keyDownDown  :: Bool 
+                 , bullets      :: [Bullet] 
                  }
+
+defaultPlayer :: Player 
+defaultPlayer = Player { playerPosition = Position (-350) 0 
+                       , playerVelocity = Vector1 0 
+                       }
+
 
 initialState :: GameState
 initialState = GameState { 
-               playerPosition = Position (-300) 0 
+                 player = defaultPlayer  
                , keyUpDown = False 
                , keyDownDown = False
+               , bullets = [] 
                }
