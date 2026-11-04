@@ -88,3 +88,7 @@ bulletlist gs | keySpaceDown gs && (coolDown gs <= 0) = gs { bullets = b : bulle
 applyBullet :: Float -> [Bullet] -> [Bullet] 
 applyBullet secs bs = filter (\b -> bulletLifetime b >= 0) $ map (moveBullet secs) bs 
 
+--Enemies 
+
+updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen) 
+updateEnemy = undefined 

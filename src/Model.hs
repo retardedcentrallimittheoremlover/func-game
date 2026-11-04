@@ -12,6 +12,17 @@ nO_SECS_BETWEEN_CYCLES = 5
 data Vector1 = Vector1 Float 
 data Vector2 = Vector2 Float Float 
 
+data BoundingBox = BoundingBox Float Float  
+
+class HasBoundingBox a where 
+    boundingBox :: a -> BoundingBox 
+
+instance HasBoundingBox Enemy where 
+    boundingBox e = undefined 
+
+instance HasBoundingBox Bullet where 
+    boundingBox b = undefined 
+
 data Position = Position { px :: Float, py :: Float} 
 
 data Bullet = Bullet { bulletPosition :: Position
@@ -22,6 +33,12 @@ data Bullet = Bullet { bulletPosition :: Position
 data Player = Player { playerPosition :: Position
                      , playerVelocity :: Vector1
                      }
+
+data Enemy = Enemy { enemyPosition  :: Position 
+                   , enemyVelocitiy :: Float 
+                   , enemySize      :: BoundingBox  
+                   , enemySpeed     :: Float 
+                   }
 
 data GameState = GameState {
                    player       :: Player  
