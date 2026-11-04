@@ -9,10 +9,11 @@ view :: GameState -> IO Picture
 view = return . viewPure
 
 viewPure :: GameState -> Picture
-viewPure gstate = pictures (p : bs) 
+viewPure gstate = pictures (p : bs ++ e1) 
                 where 
                 p = drawPlayer $ player gstate  
                 bs = map drawBullet $ bullets gstate  
+                e1 = map drawEnemy $ enemies gstate 
 
 drawPlayer :: Player -> Picture 
 drawPlayer p = let 
@@ -23,3 +24,8 @@ drawBullet :: Bullet -> Picture
 drawBullet b = let 
                Position x y = bulletPosition b 
                in translate x y $ color yellow $ circleSolid 8 
+
+drawEnemy :: Enemy -> Picture 
+drawEnemy e = let 
+              Position x y = enemyPosition e 
+              in translate x y $ color red $ rectangleSolid 30 30 

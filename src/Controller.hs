@@ -12,6 +12,7 @@ import System.Random
 step :: Float -> GameState -> IO GameState
 step secs gstate = return (gstate'' { player = movePlayer secs p'
                                     , bullets = applyBullet secs bs  
+                                    , enemies = applyEnemies secs e 
                                     }) 
             where 
             p  = player gstate 
@@ -19,6 +20,7 @@ step secs gstate = return (gstate'' { player = movePlayer secs p'
             bs = bullets $ bulletlist gstate' 
             gstate' = gstate { coolDown = max 0 (coolDown gstate - secs) }
             gstate'' = bulletlist gstate' 
+            e = enemies gstate' 
 
 -- | Move player function 
 movePlayer :: Float -> Player -> Player  
@@ -92,3 +94,32 @@ applyBullet secs bs = filter (\b -> bulletLifetime b >= 0) $ map (moveBullet sec
 
 updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen) 
 updateEnemy = undefined 
+
+moveEnemy :: Float -> Enemy -> Enemy 
+moveEnemy secs e = let 
+                   Position x y  = enemyPosition e  
+                   Vector2 vx vy = enemyVelocitiy e  
+                   speed         = enemySpeed e  
+                   y'            = y + vy * secs * speed 
+                   x'            = x + vx * secs * speed 
+                in e { enemyPosition = Position x' y' }
+
+applyEnemies :: Float -> [Enemy] -> [Enemy] 
+applyEnemies secs es = map (moveEnemy secs) es 
+
+
+--BoundingBox 
+
+collides :: (HasBoundingBox a, HasBoundingBox b) 
+         => a -> b -> Bool 
+collides a b = let 
+               (xa, xa', ya, ya') = getEdges a 
+               (xb, xb', yb, yb') = getEdges b 
+        in xa <= xb' && xa' >= xb && 
+           ya <= yb' && ya' >= yb 
+
+getEdges :: HasBoundingBox a => a -> (Float, Float, Float, Float) 
+getEdges a = let 
+             Position x y = objectPosition a  
+             BoundingBox w h = boundingBox a 
+          in (x - w/2, x + w/2, y - h/2, y + h/2) 
