@@ -129,7 +129,18 @@ enemyHitPlayer :: Enemy -> Player -> Bool
 enemyHitPlayer e p = collides e p  
 
 resolveCollisions :: Player -> [Bullet] -> [Enemy] -> Collision 
-resolveCollisions p bs es = undefined  
+resolveCollisions p bs es = let 
+                            rb = removeHitBullets bs es 
+                            re = removeHitEnemies bs es 
+                            re' = removeEnemiesHitPlayer p re 
+                            ph = playerHit p es 
+                            n = length es - length re 
+
+            in Collision { remainingEnemies = re'
+                         , remainingBullets = rb 
+                         , playerWasHit = ph 
+                         , enemiesDestroyed = n 
+                         }
 
 --BoundingBox 
 
