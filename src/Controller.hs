@@ -33,7 +33,6 @@ movePlayer secs p =
         speed = 250
         y' = max (-275) (min 275 (y + vy * secs * speed))
     in p { playerPosition = Position x y' }
-
 input :: Event -> GameState -> IO GameState
 input event gstate = return (inputKey event gstate)
 
@@ -140,7 +139,6 @@ keepBulletsInField = filter isInField
     isInField bullet =
         let Position x y = bulletPosition bullet
         in x >= -382 && x <= 382 && y >= -282 && y <= 282
-
 keepEnemiesInField :: [Enemy] -> [Enemy]
 keepEnemiesInField = filter isInField
     where
