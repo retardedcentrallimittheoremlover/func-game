@@ -32,7 +32,7 @@ movePlayer secs p =
     let Position x y = playerPosition p
         Vector1 vy = playerVelocity p
         speed = 250
-        y' = max (-275) (min 275 (y + vy * secs * speed))
+        y' = max (fieldBottom + 25) (min (fieldTop - 25) (y + vy * secs * speed))
     in p { playerPosition = Position x y' }
 input :: Event -> GameState -> IO GameState
 input event gstate = return (inputKey event gstate)
@@ -139,7 +139,7 @@ randomSpawnInterval Hard = randomRIO (0.4, 1.2)
 
 randomSeparatedY :: Float -> IO Float
 randomSeparatedY previousY = do
-    y <- randomRIO (-250, 250)
+    y <- randomRIO (fieldBottom + 25, fieldTop - 25)
     if abs (y - previousY) >= 50
        then return y
        else randomSeparatedY previousY
@@ -152,7 +152,7 @@ lastEnemyY es =
 
 newEnemy :: Float -> Enemy
 newEnemy y =
-    kamiEnemy { enemyPosition = Position 350 y
+    kamiEnemy { enemyPosition = Position (fieldRight - 15) y
               , enemySpeed = enemySpeed kamiEnemy
               }
 
@@ -161,13 +161,15 @@ keepBulletsInField = filter isInField
     where
     isInField bullet =
         let Position x y = bulletPosition bullet
-        in x >= -382 && x <= 382 && y >= -282 && y <= 282
+        in x >= fieldLeft + 8 && x <= fieldRight - 8
+           && y >= fieldBottom + 8 && y <= fieldTop - 8
 keepEnemiesInField :: [Enemy] -> [Enemy]
 keepEnemiesInField = filter isInField
     where
     isInField enemy =
         let Position x y = enemyPosition enemy
-        in x >= -375 && x <= 375 && y >= -275 && y <= 275
+        in x >= fieldLeft + 15 && x <= fieldRight - 15
+           && y >= fieldBottom + 15 && y <= fieldTop - 15
 
 spawnBullet :: Player -> Float -> Bullet
 spawnBullet p lifetime =

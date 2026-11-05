@@ -11,6 +11,21 @@ data Screen = Menu | Playing
 
 data Difficulty = Easy | Medium | Hard
                   deriving (Eq, Show)
+-- screen dimensions and field margin
+windowWidth :: Float
+windowWidth = 800
+
+windowHeight :: Float
+windowHeight = 600
+
+fieldMargin :: Float
+fieldMargin = 10
+
+fieldLeft, fieldRight, fieldBottom, fieldTop :: Float
+fieldLeft = -(windowWidth / 2 - fieldMargin)
+fieldRight = windowWidth / 2 - fieldMargin
+fieldBottom = -(windowHeight / 2 - fieldMargin)
+fieldTop = windowHeight / 2 - fieldMargin
 
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 5
@@ -89,8 +104,8 @@ data Collision = Collision {
                   , enemiesDestroyed :: Int 
                   }
 
-defaultPlayer :: Player 
-defaultPlayer = Player { playerPosition = Position (-350) 0 
+defaultPlayer :: Player
+defaultPlayer = Player { playerPosition = Position (fieldLeft + 25) 0
                        , playerVelocity = Vector1 0 
                        }
 
@@ -98,7 +113,7 @@ bulletSpeed :: Float
 bulletSpeed = 500 
 
 kamiEnemy :: Enemy 
-kamiEnemy = Enemy { enemyPosition = Position (350) 0 
+kamiEnemy = Enemy { enemyPosition = Position (fieldRight - 15) 0
                   , enemyVelocity = Vector2 (-1) 0
                   , enemySize      = BoundingBox 30 30  
                   , enemySpeed     = 300

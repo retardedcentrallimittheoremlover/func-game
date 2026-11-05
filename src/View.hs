@@ -14,7 +14,9 @@ viewPure gstate
     | otherwise = pictures [fieldBorder, pictures (gameView gstate ++ pauseOverlay gstate)]
 
 fieldBorder :: Picture
-fieldBorder = color (greyN 0.6) (rectangleWire 780 580)
+fieldBorder = color (greyN 0.6)
+            (rectangleWire (windowWidth - 2 * fieldMargin)
+                           (windowHeight - 2 * fieldMargin))
 
 gameView :: GameState -> [Picture]
 gameView gstate = [drawPlayer (player gstate), scoreView (score gstate)]
@@ -36,14 +38,14 @@ pauseOverlay gstate
     | otherwise = []
 
 scoreView :: Int -> Picture
-scoreView currentScore = textAt (-380) 270 20 ("Score: " ++ show currentScore)
+scoreView currentScore = textAt (fieldLeft + 10) (fieldTop - 30) 20 ("Score: " ++ show currentScore)
 
 textAt :: Float -> Float -> Float -> String -> Picture
 textAt x y size label = translate x y (scale factor factor (color white (text label)))
     where factor = size / 100
 
 menuText :: Float -> Float -> String -> Picture
-menuText size y label = textAt (-370) y size label
+menuText size y label = textAt (fieldLeft + 10) y size label
 
 highScoreAt :: Int -> GameState -> Int
 highScoreAt index gstate = highScores gstate !! index
