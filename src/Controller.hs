@@ -110,13 +110,26 @@ applyEnemies secs es = map (moveEnemy secs) es
 
 
 bulletHitsEnemy :: Bullet -> Enemy -> Bool 
-bulletHitsEnemy = undefined 
+bulletHitsEnemy b e = collides b e    
+        
 
 removeHitEnemies :: [Bullet] -> [Enemy] -> [Enemy] 
-removeHitEnemies = undefined 
+removeHitEnemies bs es = filter (\e -> not $ any (\b -> bulletHitsEnemy b e) bs) es  
+
+removeHitBullets :: [Bullet] -> [Enemy] -> [Bullet] 
+removeHitBullets bs es = filter (\b -> not $ any (\e -> bulletHitsEnemy b e) es) bs 
+
+removeEnemiesHitPlayer :: Player -> [Enemy] -> [Enemy] 
+removeEnemiesHitPlayer p es = filter (\e -> not $ enemyHitPlayer e p) es 
 
 playerHit :: Player -> [Enemy] -> Bool 
-playerHit = undefined 
+playerHit p es = any (\e -> collides p e) es  
+
+enemyHitPlayer :: Enemy -> Player -> Bool 
+enemyHitPlayer e p = collides e p  
+
+resolveCollisions :: Player -> [Bullet] -> [Enemy] -> Collision 
+resolveCollisions p bs es = undefined  
 
 --BoundingBox 
 
