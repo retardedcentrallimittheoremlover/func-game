@@ -88,6 +88,7 @@ startGame selectedDifficulty gs =
        , coolDown = 0
        , enemies = [kamiEnemy]
        , spawnTimer = 0
+       , spawnInterval = 0
        , score = 0
        , screen = Playing
        , isPaused = False
@@ -110,28 +111,31 @@ replaceAt :: Int -> a -> [a] -> [a]
 replaceAt index value values =
     take index values ++ [value] ++ drop (index + 1) values
 
-spawnRate :: Difficulty -> Float
-spawnRate Easy = 2.5
-spawnRate Medium = 1.5
-spawnRate Hard = 0.8
-
 spawnEnemies :: Float -> GameState -> IO GameState
-spawnEnemies secs gs = do
-    newEnemies <- spawnMany numberToSpawn (lastEnemyY (enemies gs))
-    return gs { enemies = enemies gs ++ newEnemies
-              , spawnTimer = timer - fromIntegral numberToSpawn * rate
-              }
-    where
-    rate = spawnRate (difficulty gs)
-    timer = spawnTimer gs + secs
-    numberToSpawn = floor (timer / rate) :: Int
+spawnEnemies secs gs = spawnDue (spawnTimer gs + secs) (spawnInterval gs) gs
 
-spawnMany :: Int -> Float -> IO [Enemy]
-spawnMany 0 _ = return []
-spawnMany count previousY = do
-    y <- randomSeparatedY previousY
-    rest <- spawnMany (count - 1) y
-    return (newEnemy y : rest)
+spawnDue :: Float -> Float -> GameState -> IO GameState
+spawnDue timer interval gs = do
+    nextInterval <- if interval > 0
+                       then return interval
+                       else randomSpawnInterval (difficulty gs)
+    if timer < nextInterval
+       then return gs { spawnTimer = timer
+                      , spawnInterval = nextInterval
+                      }
+       else do
+        y <- randomSeparatedY (lastEnemyY (enemies gs))
+        next <- randomSpawnInterval (difficulty gs)
+        spawnDue (timer - nextInterval) next
+            gs { enemies = enemies gs ++ [newEnemy y]
+               , spawnTimer = 0
+               , spawnInterval = 0
+               }
+
+randomSpawnInterval :: Difficulty -> IO Float
+randomSpawnInterval Easy = randomRIO (2.0, 4.0)
+randomSpawnInterval Medium = randomRIO (1.0, 2.5)
+randomSpawnInterval Hard = randomRIO (0.4, 1.2)
 
 randomSeparatedY :: Float -> IO Float
 randomSeparatedY previousY = do

@@ -74,6 +74,7 @@ data GameState = GameState {
                  , coolDown     :: Float 
                  , enemies      :: [Enemy] 
                  , spawnTimer   :: Float
+                 , spawnInterval :: Float
                  , score        :: Int
                  , screen       :: Screen
                  , isPaused     :: Bool
@@ -114,6 +115,7 @@ initialState = GameState {
                , coolDown = 0
                , enemies = [kamiEnemy] 
                , spawnTimer = 0
+               , spawnInterval = 0
                , score = 0
                , screen = Menu
                , isPaused = False
