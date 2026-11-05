@@ -22,6 +22,7 @@ gameView :: GameState -> [Picture]
 gameView gstate = [drawPlayer (player gstate), scoreView (score gstate)]
                 ++ map drawBullet (bullets gstate)
                 ++ map drawEnemy (enemies gstate)
+                ++ map drawExplosion (explosions gstate)
 
 menuView :: GameState -> Picture
 menuView gstate = pictures
@@ -64,3 +65,13 @@ drawEnemy :: Enemy -> Picture
 drawEnemy e = let 
               Position x y = enemyPosition e 
               in translate x y $ color red $ rectangleSolid 30 30 
+
+drawExplosion :: Explosion -> Picture
+drawExplosion explosion =
+    let Position x y = explosionPosition explosion
+        progress = 1 - explosionLifetime explosion / explosionDuration
+        radius = 10 + 15 * progress
+    in translate x y $ pictures
+        [ color orange (circleSolid radius)
+        , color yellow (circleSolid (radius * 0.66))
+        ]

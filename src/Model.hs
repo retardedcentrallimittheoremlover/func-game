@@ -85,6 +85,10 @@ data Enemy = Enemy { enemyPosition  :: Position
                    , enemySpeed     :: Float 
                    }
 
+data Explosion = Explosion { explosionPosition :: Position
+                           , explosionLifetime :: Float
+                           }
+
 data GameState = GameState {
                    player       :: Player  
                  , keyUpDown    :: Bool
@@ -93,6 +97,7 @@ data GameState = GameState {
                  , bullets      :: [Bullet] 
                  , coolDown     :: Float 
                  , enemies      :: [Enemy] 
+                 , explosions   :: [Explosion]
                  , spawnTimer   :: Float
                  , spawnInterval :: Float
                  , score        :: Int
@@ -105,6 +110,7 @@ data GameState = GameState {
 data Collision = Collision {
                     remainingEnemies :: [Enemy] 
                   , remainingBullets :: [Bullet] 
+                  , explosionsCreated :: [Explosion]
                   , playerWasHit     :: Bool 
                   , enemiesDestroyed :: Int 
                   }
@@ -116,6 +122,9 @@ defaultPlayer = Player { playerPosition = Position (fieldLeft + 25) 0
 
 bulletSpeed :: Float 
 bulletSpeed = 500 
+
+explosionDuration :: Float
+explosionDuration = 0.15 -- seconds
 
 kamiEnemy :: Enemy 
 kamiEnemy = Enemy { enemyPosition = Position (fieldRight - 15) 0
@@ -134,6 +143,7 @@ initialState = GameState {
                , bullets = [] 
                , coolDown = 0
                , enemies = [kamiEnemy] 
+               , explosions = []
                , spawnTimer = 0
                , spawnInterval = 0
                , score = 0

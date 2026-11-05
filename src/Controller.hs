@@ -16,6 +16,7 @@ step secs gstate
         let collision = resolveCollisions (player moved) (bullets moved) (enemies moved)
             nextState = moved { bullets = remainingBullets collision
                               , enemies = remainingEnemies collision
+                              , explosions = explosions moved ++ explosionsCreated collision
                               , score = score moved + enemiesDestroyed collision
                               }
         if playerWasHit collision
@@ -37,6 +38,7 @@ step secs gstate
     updated = gstate' { player = movePlayer secs p'
                       , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
                       , enemies = keepEnemiesInField (applyEnemies secs (enemies gstate'))
+                      , explosions = updateExplosions secs (explosions gstate')
                       }
 
 movePlayer :: Float -> Player -> Player
@@ -104,6 +106,7 @@ startGame selectedDifficulty gs =
        , keyDownDown = False
        , keySpaceDown = False
        , bullets = []
+       , explosions = []
        , coolDown = 0
        , enemies = [kamiEnemy]
        , spawnTimer = 0
@@ -229,6 +232,12 @@ moveEnemy secs e =
 applyEnemies :: Float -> [Enemy] -> [Enemy]
 applyEnemies secs = map (moveEnemy secs)
 
+updateExplosions :: Float -> [Explosion] -> [Explosion]
+updateExplosions secs =
+    filter ((> 0) . explosionLifetime)
+    . map (\explosion -> explosion { explosionLifetime =
+                                      explosionLifetime explosion - secs })
+
 bulletHitsEnemy :: Bullet -> Enemy -> Bool
 bulletHitsEnemy = collides
 
@@ -250,14 +259,18 @@ enemyHitPlayer = collides
 resolveCollisions :: Player -> [Bullet] -> [Enemy] -> Collision
 resolveCollisions p bs es =
     let rb = removeHitBullets bs es
+        bulletHitEnemies = filter (\e -> any (`bulletHitsEnemy` e) bs) es
         re = removeEnemiesHitPlayer p (removeHitEnemies bs es)
         ph = playerHit p es
         n = length es - length (removeHitEnemies bs es)
     in Collision { remainingEnemies = re
                  , remainingBullets = rb
+                 , explosionsCreated = map explosionFor bulletHitEnemies
                  , playerWasHit = ph
                  , enemiesDestroyed = n
                  }
+    where
+    explosionFor enemy = Explosion (enemyPosition enemy) explosionDuration
 
 directionTo :: Position -> Position -> Vector2
 directionTo (Position px py) (Position ex ey) =
