@@ -10,17 +10,27 @@ import System.Random
 
 -- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gstate = return (gstate'' { player = movePlayer secs p'
-                                    , bullets = applyBullet secs bs  
-                                    , enemies = applyEnemies secs e 
-                                    }) 
-            where 
-            p  = player gstate 
-            p' = p { playerVelocity = Vector1 (playerdir gstate) } 
-            bs = bullets $ bulletlist gstate' 
-            gstate' = gstate { coolDown = max 0 (coolDown gstate - secs) }
-            gstate'' = bulletlist gstate' 
-            e = enemies gstate' 
+step secs gs = return $ gsB { player = mp 
+                            , bullets = remainingBullets collision   
+                            , enemies = remainingEnemies collision 
+                            } 
+            where  
+            --Player 
+            p = player gs 
+            p' = p { playerVelocity = Vector1 (playerdir gs) } 
+            mp = movePlayer secs p' 
+
+            --Shooting/Cooldown 
+            gsCd = gs { coolDown = max 0 (coolDown gs - secs) } 
+            gsB = bulletlist gsCd  
+
+            --Update bullets/enemies 
+            bs = applyBullet secs (bullets gsB)  
+            es = applyEnemies secs (enemies gsB) 
+
+            --Collisions 
+            collision = resolveCollisions mp bs es  
+
 
 -- | Player functions 
 movePlayer :: Float -> Player -> Player  
@@ -30,7 +40,6 @@ movePlayer secs p     =
          speed        = 250 
          y'           = y + vy * secs * speed  
     in p { playerPosition = Position x y' } 
-
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
@@ -141,6 +150,18 @@ resolveCollisions p bs es = let
                          , playerWasHit = ph 
                          , enemiesDestroyed = n 
                          }
+
+directionTo :: Position -> Position -> Vector2 
+directionTo (Position px py) (Position ex ey) = let 
+                                            dx = px - ex  
+                                            dy = py - ey 
+                                            dir = Vector2 dx dy  
+                                        in normalize dir 
+
+spawnKami :: Position -> Position -> Enemy 
+spawnKami startPos targetPos = let 
+                  ve = directionTo targetPos startPos  
+                  in kamiEnemy { enemyPosition = startPos, enemyVelocitiy = ve }
 
 --BoundingBox 
 

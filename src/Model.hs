@@ -12,6 +12,18 @@ nO_SECS_BETWEEN_CYCLES = 5
 data Vector1 = Vector1 Float 
 data Vector2 = Vector2 Float Float 
 
+scaleV :: Float -> Vector2 -> Vector2 
+scaleV s (Vector2 ax ay) = Vector2 (s*ax) (s*ay) 
+
+magnitude :: Vector2 -> Float 
+magnitude (Vector2 x y) = sqrt (x*x + y*y) 
+
+normalize :: Vector2 -> Vector2 
+normalize v@(Vector2 0 0) = Vector2 1 0 
+normalize v@(Vector2 x y) = let 
+                        m = magnitude v 
+                    in scaleV (1/m) v 
+
 data BoundingBox = BoundingBox Float Float  
 
 class HasBoundingBox a where 
@@ -76,8 +88,9 @@ kamiEnemy :: Enemy
 kamiEnemy = Enemy { enemyPosition = Position (350) 0 
                   , enemyVelocitiy = Vector2 (-1) 0 
                   , enemySize      = BoundingBox 30 30  
-                  , enemySpeed     = 300 
+                  , enemySpeed     = 200 
                   } 
+
 
 initialState :: GameState
 initialState = GameState { 
