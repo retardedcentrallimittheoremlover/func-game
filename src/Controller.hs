@@ -192,7 +192,7 @@ removeHitEnemies :: [Bullet] -> [Enemy] -> [Enemy]
 removeHitEnemies bs = filter (\e -> not (any (`bulletHitsEnemy` e) bs))
 
 removeHitBullets :: [Bullet] -> [Enemy] -> [Bullet]
-removeHitBullets bs es = filter (\b -> not (any (`bulletHitsEnemy` b) es)) bs
+removeHitBullets bs es = filter (\b -> not (any (bulletHitsEnemy b) es)) bs
 
 removeEnemiesHitPlayer :: Player -> [Enemy] -> [Enemy]
 removeEnemiesHitPlayer p = filter (\e -> not (enemyHitPlayer e p))
