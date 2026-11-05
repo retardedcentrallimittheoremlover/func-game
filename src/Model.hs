@@ -2,6 +2,10 @@
 --   which represent the state of the game
 module Model where
 
+import Data.Maybe (mapMaybe)
+import System.IO.Error (catchIOError)
+import Text.Read (readMaybe)
+
 data InfoToShow = ShowNothing
                 | ShowANumber Int
                 | ShowAChar   Char
@@ -11,6 +15,7 @@ data Screen = Menu | Playing
 
 data Difficulty = Easy | Medium | Hard
                   deriving (Eq, Show)
+
 -- screen dimensions and field margin
 windowWidth :: Float
 windowWidth = 800
@@ -137,3 +142,15 @@ initialState = GameState {
                , difficulty = Easy
                , highScores = [0, 0, 0]
                }
+
+highscoreFile :: FilePath
+highscoreFile = "highscores.txt"
+
+loadHighScores :: IO [Int]
+loadHighScores = do
+  content <- catchIOError (readFile highscoreFile) (\_ -> return "")
+  let scores = mapMaybe readMaybe (lines content)
+  return (take 3 (scores ++ repeat 0))
+
+saveHighScores :: [Int] -> IO ()
+saveHighScores scores = writeFile highscoreFile (unlines (map show scores))

@@ -35,7 +35,14 @@ movePlayer secs p =
         y' = max (fieldBottom + 25) (min (fieldTop - 25) (y + vy * secs * speed))
     in p { playerPosition = Position x y' }
 input :: Event -> GameState -> IO GameState
-input event gstate = return (inputKey event gstate)
+input event gstate = do
+    let updatedState = inputKey event gstate
+    case event of
+        EventKey (Char 'm') Down _ _
+            | screen gstate == Playing -> do
+                saveHighScores (highScores updatedState)
+                return updatedState
+        _ -> return updatedState
 
 playerdir :: GameState -> Float
 playerdir gstate
