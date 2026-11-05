@@ -22,7 +22,7 @@ step secs gstate = return (gstate'' { player = movePlayer secs p'
             gstate'' = bulletlist gstate' 
             e = enemies gstate' 
 
--- | Move player function 
+-- | Player functions 
 movePlayer :: Float -> Player -> Player  
 movePlayer secs p     =  
     let  Position x y = playerPosition p  
@@ -30,6 +30,7 @@ movePlayer secs p     =
          speed        = 250 
          y'           = y + vy * secs * speed  
     in p { playerPosition = Position x y' } 
+
 
 -- | Handle user input
 input :: Event -> GameState -> IO GameState
@@ -108,6 +109,15 @@ applyEnemies :: Float -> [Enemy] -> [Enemy]
 applyEnemies secs es = map (moveEnemy secs) es 
 
 
+bulletHitsEnemy :: Bullet -> Enemy -> Bool 
+bulletHitsEnemy = undefined 
+
+removeHitEnemies :: [Bullet] -> [Enemy] -> [Enemy] 
+removeHitEnemies = undefined 
+
+playerHit :: Player -> [Enemy] -> Bool 
+playerHit = undefined 
+
 --BoundingBox 
 
 collides :: (HasBoundingBox a, HasBoundingBox b) 
@@ -123,3 +133,4 @@ getEdges a = let
              Position x y = objectPosition a  
              BoundingBox w h = boundingBox a 
           in (x - w/2, x + w/2, y - h/2, y + h/2) 
+

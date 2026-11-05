@@ -57,6 +57,13 @@ data GameState = GameState {
                  , enemies      :: [Enemy] 
                  }
 
+data Collision = Collision {
+                    remainingEnemies :: [Enemy] 
+                  , remainingBullets :: [Bullet] 
+                  , playerWasHit     :: Bool 
+                  , enemiesDestroyed :: Int 
+                  }
+
 defaultPlayer :: Player 
 defaultPlayer = Player { playerPosition = Position (-350) 0 
                        , playerVelocity = Vector1 0 
