@@ -14,10 +14,22 @@ step secs gstate
     | otherwise = do
         moved <- spawnEnemies secs updated
         let collision = resolveCollisions (player moved) (bullets moved) (enemies moved)
-        return (moved { bullets = remainingBullets collision
-                      , enemies = remainingEnemies collision
-                      , score = score moved + enemiesDestroyed collision
-                      })
+            nextState = moved { bullets = remainingBullets collision
+                              , enemies = remainingEnemies collision
+                              , score = score moved + enemiesDestroyed collision
+                              }
+        if playerWasHit collision
+           then do
+               let gameOverState = updateHighScore nextState
+                                     { screen = Menu
+                                     , isPaused = False
+                                     , keyUpDown = False
+                                     , keyDownDown = False
+                                     , keySpaceDown = False
+                                     }
+               saveHighScores (highScores gameOverState)
+               return gameOverState
+           else return nextState
     where
     p = player gstate
     p' = p { playerVelocity = Vector1 (playerdir gstate) }

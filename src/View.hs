@@ -27,8 +27,8 @@ menuView :: GameState -> Picture
 menuView gstate = pictures
     [ menuText 34 190 "SHOOT EM UP"
     , menuText 18 105 "Choose a difficulty"
-    , menuText 20 40 ("1  Easy       Highscore: " ++ show (highScoreAt 0 gstate))
-    , menuText 20 (-5) ("2  Medium     Highscore: " ++ show (highScoreAt 1 gstate))
+    , menuText 20 40    ("1  Easy       Highscore: " ++ show (highScoreAt 0 gstate))
+    , menuText 20 (-5)  ("2  Medium     Highscore: " ++ show (highScoreAt 1 gstate))
     , menuText 20 (-50) ("3  Hard       Highscore: " ++ show (highScoreAt 2 gstate))
     ]
 
