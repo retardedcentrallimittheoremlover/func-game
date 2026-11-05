@@ -6,6 +6,12 @@ data InfoToShow = ShowNothing
                 | ShowANumber Int
                 | ShowAChar   Char
 
+data Screen = Menu | Playing
+              deriving (Eq, Show)
+
+data Difficulty = Easy | Medium | Hard
+                  deriving (Eq, Show)
+
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 5
 
@@ -67,6 +73,12 @@ data GameState = GameState {
                  , bullets      :: [Bullet] 
                  , coolDown     :: Float 
                  , enemies      :: [Enemy] 
+                 , spawnTimer   :: Float
+                 , score        :: Int
+                 , screen       :: Screen
+                 , isPaused     :: Bool
+                 , difficulty   :: Difficulty
+                 , highScores   :: [Int]
                  }
 
 data Collision = Collision {
@@ -101,4 +113,10 @@ initialState = GameState {
                , bullets = [] 
                , coolDown = 0
                , enemies = [kamiEnemy] 
+               , spawnTimer = 0
+               , score = 0
+               , screen = Menu
+               , isPaused = False
+               , difficulty = Easy
+               , highScores = [0, 0, 0]
                }

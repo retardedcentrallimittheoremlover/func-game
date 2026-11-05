@@ -9,11 +9,44 @@ view :: GameState -> IO Picture
 view = return . viewPure
 
 viewPure :: GameState -> Picture
-viewPure gstate = pictures (p : bs ++ e1) 
-                where 
-                p = drawPlayer $ player gstate  
-                bs = map drawBullet $ bullets gstate  
-                e1 = map drawEnemy $ enemies gstate 
+viewPure gstate
+    | screen gstate == Menu = pictures [fieldBorder, menuView gstate]
+    | otherwise = pictures [fieldBorder, pictures (gameView gstate ++ pauseOverlay gstate)]
+
+fieldBorder :: Picture
+fieldBorder = color (greyN 0.6) (rectangleWire 780 580)
+
+gameView :: GameState -> [Picture]
+gameView gstate = [drawPlayer (player gstate), scoreView (score gstate)]
+                ++ map drawBullet (bullets gstate)
+                ++ map drawEnemy (enemies gstate)
+
+menuView :: GameState -> Picture
+menuView gstate = pictures
+    [ menuText 34 190 "SHOOT EM UP"
+    , menuText 18 105 "Choose a difficulty"
+    , menuText 20 40 ("1  Easy       Highscore: " ++ show (highScoreAt 0 gstate))
+    , menuText 20 (-5) ("2  Medium     Highscore: " ++ show (highScoreAt 1 gstate))
+    , menuText 20 (-50) ("3  Hard       Highscore: " ++ show (highScoreAt 2 gstate))
+    ]
+
+pauseOverlay :: GameState -> [Picture]
+pauseOverlay gstate
+    | isPaused gstate = [textAt (-90) 0 36 "PAUSED"]
+    | otherwise = []
+
+scoreView :: Int -> Picture
+scoreView currentScore = textAt (-380) 270 20 ("Score: " ++ show currentScore)
+
+textAt :: Float -> Float -> Float -> String -> Picture
+textAt x y size label = translate x y (scale factor factor (color white (text label)))
+    where factor = size / 100
+
+menuText :: Float -> Float -> String -> Picture
+menuText size y label = textAt (-370) y size label
+
+highScoreAt :: Int -> GameState -> Int
+highScoreAt index gstate = highScores gstate !! index
 
 drawPlayer :: Player -> Picture 
 drawPlayer p = let 

@@ -8,174 +8,233 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
 
--- | Handle one iteration of the game
 step :: Float -> GameState -> IO GameState
-step secs gs = return $ gsB { player = mp 
-                            , bullets = remainingBullets collision   
-                            , enemies = remainingEnemies collision 
-                            } 
-            where  
-            --Player 
-            p = player gs 
-            p' = p { playerVelocity = Vector1 (playerdir gs) } 
-            mp = movePlayer secs p' 
+step secs gstate
+    | screen gstate /= Playing || isPaused gstate = return gstate
+    | otherwise = return (moved { bullets = remainingBullets collision
+                                , enemies = remainingEnemies collision
+                                , score = score moved + enemiesDestroyed collision
+                                })
+    where
+    p = player gstate
+    p' = p { playerVelocity = Vector1 (playerdir gstate) }
+    gstate' = bulletlist gstate { coolDown = max 0 (coolDown gstate - secs) }
+    moved = spawnEnemies secs
+          (gstate' { player = movePlayer secs p'
+                   , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
+                   , enemies = keepEnemiesInField (applyEnemies secs (enemies gstate'))
+                   })
+    collision = resolveCollisions (player moved) (bullets moved) (enemies moved)
 
-            --Shooting/Cooldown 
-            gsCd = gs { coolDown = max 0 (coolDown gs - secs) } 
-            gsB = bulletlist gsCd  
+movePlayer :: Float -> Player -> Player
+movePlayer secs p =
+    let Position x y = playerPosition p
+        Vector1 vy = playerVelocity p
+        speed = 250
+        y' = max (-275) (min 275 (y + vy * secs * speed))
+    in p { playerPosition = Position x y' }
 
-            --Update bullets/enemies 
-            bs = applyBullet secs (bullets gsB)  
-            es = applyEnemies secs (enemies gsB) 
-
-            --Collisions 
-            collision = resolveCollisions mp bs es  
-
-
--- | Player functions 
-movePlayer :: Float -> Player -> Player  
-movePlayer secs p     =  
-    let  Position x y = playerPosition p  
-         Vector1 vy   = playerVelocity p 
-         speed        = 250 
-         y'           = y + vy * secs * speed  
-    in p { playerPosition = Position x y' } 
-
--- | Handle user input
 input :: Event -> GameState -> IO GameState
-input e gstate = return (inputKey e gstate)
+input event gstate = return (inputKey event gstate)
 
-playerdir :: GameState -> Float  
-playerdir gstate | keyUpDown gstate && not (keyDownDown gstate) = 1
-                 | keyDownDown gstate && not (keyUpDown gstate) = -1 
-                 | otherwise = 0 
+playerdir :: GameState -> Float
+playerdir gstate
+    | keyUpDown gstate && not (keyDownDown gstate) = 1
+    | keyDownDown gstate && not (keyUpDown gstate) = -1
+    | otherwise = 0
 
 inputKey :: Event -> GameState -> GameState
---Up arrow key pressed
-inputKey (EventKey (SpecialKey KeyUp) Down _ _) gs = 
-    gs { keyUpDown = True} 
+inputKey (EventKey (Char '1') Down _ _) gs
+    | screen gs == Menu = startGame Easy gs
+inputKey (EventKey (Char '2') Down _ _) gs
+    | screen gs == Menu = startGame Medium gs
+inputKey (EventKey (Char '3') Down _ _) gs
+    | screen gs == Menu = startGame Hard gs
+inputKey (EventKey (Char 'p') Down _ _) gs
+    | screen gs == Playing =
+        gs { isPaused = not (isPaused gs)
+           , keyUpDown = False
+           , keyDownDown = False
+           , keySpaceDown = False
+           }
+inputKey (EventKey (Char 'm') Down _ _) gs =
+    updateHighScore gs { screen = Menu
+                       , isPaused = False
+                       , keyUpDown = False
+                       , keyDownDown = False
+                       , keySpaceDown = False
+                       }
+inputKey (EventKey (SpecialKey KeyUp) Down _ _) gs
+    | screen gs == Playing && not (isPaused gs) = gs { keyUpDown = True }
+inputKey (EventKey (SpecialKey KeyUp) Up _ _) gs =
+    gs { keyUpDown = False }
+inputKey (EventKey (SpecialKey KeyDown) Down _ _) gs
+    | screen gs == Playing && not (isPaused gs) = gs { keyDownDown = True }
+inputKey (EventKey (SpecialKey KeyDown) Up _ _) gs =
+    gs { keyDownDown = False }
+inputKey (EventKey (SpecialKey KeySpace) Down _ _) gs
+    | screen gs == Playing && not (isPaused gs) = gs { keySpaceDown = True }
+inputKey (EventKey (SpecialKey KeySpace) Up _ _) gs =
+    gs { keySpaceDown = False }
+inputKey _ gstate = gstate
 
---Up arrow key released 
-inputKey (EventKey (SpecialKey KeyUp) Up _ _) gs = 
-    gs { keyUpDown = False} 
+startGame :: Difficulty -> GameState -> GameState
+startGame selectedDifficulty gs =
+    gs { player = defaultPlayer
+       , keyUpDown = False
+       , keyDownDown = False
+       , keySpaceDown = False
+       , bullets = []
+       , coolDown = 0
+       , enemies = [kamiEnemy]
+       , spawnTimer = 0
+       , score = 0
+       , screen = Playing
+       , isPaused = False
+       , difficulty = selectedDifficulty
+       }
 
---Down arrow key pressed 
-inputKey (EventKey (SpecialKey KeyDown) Down _ _) gs = 
-    gs { keyDownDown = True } 
+updateHighScore :: GameState -> GameState
+updateHighScore gs =
+    gs { highScores = replaceAt index (max (score gs) (highScores gs !! index))
+                                  (highScores gs)
+       }
+    where index = difficultyIndex (difficulty gs)
 
---Down arrow released 
-inputKey (EventKey (SpecialKey KeyDown) Up _ _) gs = 
-    gs { keyDownDown = False } 
+difficultyIndex :: Difficulty -> Int
+difficultyIndex Easy = 0
+difficultyIndex Medium = 1
+difficultyIndex Hard = 2
 
---Spacebar 
-inputKey (EventKey (SpecialKey KeySpace) Down _ _) gs = 
-    gs { keySpaceDown = True } 
+replaceAt :: Int -> a -> [a] -> [a]
+replaceAt index value values =
+    take index values ++ [value] ++ drop (index + 1) values
 
-inputKey (EventKey (SpecialKey KeySpace) Up _ _) gs = 
-    gs { keySpaceDown = False } 
+spawnRate :: Difficulty -> Float
+spawnRate Easy = 2.5
+spawnRate Medium = 1.5
+spawnRate Hard = 0.8
 
-inputKey _ gstate = gstate -- Otherwise keep the same
+spawnEnemies :: Float -> GameState -> GameState
+spawnEnemies secs gs =
+    gs { enemies = enemies gs ++ newEnemies
+       , spawnTimer = timer - fromIntegral numberToSpawn * rate
+       }
+    where
+    rate = spawnRate (difficulty gs)
+    timer = spawnTimer gs + secs
+    numberToSpawn = floor (timer / rate) :: Int
+    newEnemies = map (newEnemy (length (enemies gs))) [0 .. numberToSpawn - 1]
 
---Bullets 
-spawnBullet :: Player -> Float -> Bullet 
-spawnBullet p f =
-            let Position x y    = playerPosition p 
-                bv              = Vector2 bulletSpeed 0     
-            in Bullet (Position x y) bv f  
+newEnemy :: Int -> Int -> Enemy
+newEnemy existingCount index =
+    kamiEnemy { enemyPosition = Position 350 y
+              , enemySpeed = 300 + fromIntegral (index `mod` 3) * 25
+              }
+    where
+    y = fromIntegral (((existingCount + index) * 83) `mod` 500) - 250
 
-moveBullet :: Float -> Bullet -> Bullet 
-moveBullet secs b = 
-            let Position x y    = bulletPosition b 
-                Vector2 vx0 vy0 = bulletVelocity b 
-                bpos            = Position (x + vx0 * secs) (y + vy0 * secs)
-                blife           = bulletLifetime b - secs 
-            in b { bulletPosition = bpos, bulletLifetime = blife } 
+keepBulletsInField :: [Bullet] -> [Bullet]
+keepBulletsInField = filter isInField
+    where
+    isInField bullet =
+        let Position x y = bulletPosition bullet
+        in x >= -382 && x <= 382 && y >= -282 && y <= 282
 
-bulletlist :: GameState -> GameState  
-bulletlist gs | keySpaceDown gs && (coolDown gs <= 0) = gs { bullets = b : bullets gs, coolDown = 0.2 }  
-              | otherwise       = gs   
-           where 
-           b = spawnBullet (player gs) 2  
+keepEnemiesInField :: [Enemy] -> [Enemy]
+keepEnemiesInField = filter isInField
+    where
+    isInField enemy =
+        let Position x y = enemyPosition enemy
+        in x >= -375 && x <= 375 && y >= -275 && y <= 275
 
-applyBullet :: Float -> [Bullet] -> [Bullet] 
-applyBullet secs bs = filter (\b -> bulletLifetime b >= 0) $ map (moveBullet secs) bs 
+spawnBullet :: Player -> Float -> Bullet
+spawnBullet p lifetime =
+    let Position x y = playerPosition p
+    in Bullet (Position x y) (Vector2 bulletSpeed 0) lifetime
 
---Enemies 
+moveBullet :: Float -> Bullet -> Bullet
+moveBullet secs b =
+    let Position x y = bulletPosition b
+        Vector2 vx vy = bulletVelocity b
+    in b { bulletPosition = Position (x + vx * secs) (y + vy * secs)
+         , bulletLifetime = bulletLifetime b - secs
+         }
 
-updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen) 
-updateEnemy = undefined 
+bulletlist :: GameState -> GameState
+bulletlist gs
+    | keySpaceDown gs && coolDown gs <= 0 =
+        gs { bullets = spawnBullet (player gs) 2 : bullets gs
+           , coolDown = 0.2
+           }
+    | otherwise = gs
 
-moveEnemy :: Float -> Enemy -> Enemy 
-moveEnemy secs e = let 
-                   Position x y  = enemyPosition e  
-                   Vector2 vx vy = enemyVelocitiy e  
-                   speed         = enemySpeed e  
-                   y'            = y + vy * secs * speed 
-                   x'            = x + vx * secs * speed 
-                in e { enemyPosition = Position x' y' }
+applyBullet :: Float -> [Bullet] -> [Bullet]
+applyBullet secs = filter ((>= 0) . bulletLifetime) . map (moveBullet secs)
 
-applyEnemies :: Float -> [Enemy] -> [Enemy] 
-applyEnemies secs es = map (moveEnemy secs) es 
+updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen)
+updateEnemy = undefined
 
+moveEnemy :: Float -> Enemy -> Enemy
+moveEnemy secs e =
+    let Position x y = enemyPosition e
+        Vector2 vx vy = enemyVelocitiy e
+        speed = enemySpeed e
+    in e { enemyPosition = Position (x + vx * secs * speed)
+                              (y + vy * secs * speed)
+         }
 
-bulletHitsEnemy :: Bullet -> Enemy -> Bool 
-bulletHitsEnemy b e = collides b e    
-        
+applyEnemies :: Float -> [Enemy] -> [Enemy]
+applyEnemies secs = map (moveEnemy secs)
 
-removeHitEnemies :: [Bullet] -> [Enemy] -> [Enemy] 
-removeHitEnemies bs es = filter (\e -> not $ any (\b -> bulletHitsEnemy b e) bs) es  
+bulletHitsEnemy :: Bullet -> Enemy -> Bool
+bulletHitsEnemy = collides
 
-removeHitBullets :: [Bullet] -> [Enemy] -> [Bullet] 
-removeHitBullets bs es = filter (\b -> not $ any (\e -> bulletHitsEnemy b e) es) bs 
+removeHitEnemies :: [Bullet] -> [Enemy] -> [Enemy]
+removeHitEnemies bs = filter (\e -> not (any (`bulletHitsEnemy` e) bs))
 
-removeEnemiesHitPlayer :: Player -> [Enemy] -> [Enemy] 
-removeEnemiesHitPlayer p es = filter (\e -> not $ enemyHitPlayer e p) es 
+removeHitBullets :: [Bullet] -> [Enemy] -> [Bullet]
+removeHitBullets bs es = filter (\b -> not (any (`bulletHitsEnemy` b) es)) bs
 
-playerHit :: Player -> [Enemy] -> Bool 
-playerHit p es = any (\e -> collides p e) es  
+removeEnemiesHitPlayer :: Player -> [Enemy] -> [Enemy]
+removeEnemiesHitPlayer p = filter (\e -> not (enemyHitPlayer e p))
 
-enemyHitPlayer :: Enemy -> Player -> Bool 
-enemyHitPlayer e p = collides e p  
+playerHit :: Player -> [Enemy] -> Bool
+playerHit p = any (`collides` p)
 
-resolveCollisions :: Player -> [Bullet] -> [Enemy] -> Collision 
-resolveCollisions p bs es = let 
-                            rb = removeHitBullets bs es 
-                            re = removeHitEnemies bs es 
-                            re' = removeEnemiesHitPlayer p re 
-                            ph = playerHit p es 
-                            n = length es - length re 
+enemyHitPlayer :: Enemy -> Player -> Bool
+enemyHitPlayer = collides
 
-            in Collision { remainingEnemies = re'
-                         , remainingBullets = rb 
-                         , playerWasHit = ph 
-                         , enemiesDestroyed = n 
-                         }
+resolveCollisions :: Player -> [Bullet] -> [Enemy] -> Collision
+resolveCollisions p bs es =
+    let rb = removeHitBullets bs es
+        re = removeEnemiesHitPlayer p (removeHitEnemies bs es)
+        ph = playerHit p es
+        n = length es - length (removeHitEnemies bs es)
+    in Collision { remainingEnemies = re
+                 , remainingBullets = rb
+                 , playerWasHit = ph
+                 , enemiesDestroyed = n
+                 }
 
-directionTo :: Position -> Position -> Vector2 
-directionTo (Position px py) (Position ex ey) = let 
-                                            dx = px - ex  
-                                            dy = py - ey 
-                                            dir = Vector2 dx dy  
-                                        in normalize dir 
+directionTo :: Position -> Position -> Vector2
+directionTo (Position px py) (Position ex ey) =
+    normalize (Vector2 (px - ex) (py - ey))
 
-spawnKami :: Position -> Position -> Enemy 
-spawnKami startPos targetPos = let 
-                  ve = directionTo targetPos startPos  
-                  in kamiEnemy { enemyPosition = startPos, enemyVelocitiy = ve }
+spawnKami :: Position -> Position -> Enemy
+spawnKami startPos targetPos =
+    kamiEnemy { enemyPosition = startPos
+              , enemyVelocitiy = directionTo targetPos startPos
+              }
 
---BoundingBox 
+collides :: (HasBoundingBox a, HasBoundingBox b) => a -> b -> Bool
+collides a b =
+    let (xa, xa', ya, ya') = getEdges a
+        (xb, xb', yb, yb') = getEdges b
+    in xa <= xb' && xa' >= xb && ya <= yb' && ya' >= yb
 
-collides :: (HasBoundingBox a, HasBoundingBox b) 
-         => a -> b -> Bool 
-collides a b = let 
-               (xa, xa', ya, ya') = getEdges a 
-               (xb, xb', yb, yb') = getEdges b 
-        in xa <= xb' && xa' >= xb && 
-           ya <= yb' && ya' >= yb 
-
-getEdges :: HasBoundingBox a => a -> (Float, Float, Float, Float) 
-getEdges a = let 
-             Position x y = objectPosition a  
-             BoundingBox w h = boundingBox a 
-          in (x - w/2, x + w/2, y - h/2, y + h/2) 
-
+getEdges :: HasBoundingBox a => a -> (Float, Float, Float, Float)
+getEdges a =
+    let Position x y = objectPosition a
+        BoundingBox w h = boundingBox a
+    in (x - w / 2, x + w / 2, y - h / 2, y + h / 2)
