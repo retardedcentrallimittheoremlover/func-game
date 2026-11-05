@@ -60,7 +60,7 @@ data Player = Player { playerPosition :: Position
                      }
 
 data Enemy = Enemy { enemyPosition  :: Position 
-                   , enemyVelocitiy :: Vector2 
+                   , enemyVelocity :: Vector2
                    , enemySize      :: BoundingBox  
                    , enemySpeed     :: Float 
                    }
@@ -98,9 +98,9 @@ bulletSpeed = 500
 
 kamiEnemy :: Enemy 
 kamiEnemy = Enemy { enemyPosition = Position (350) 0 
-                  , enemyVelocitiy = Vector2 (-1) 0 
+                  , enemyVelocity = Vector2 (-1) 0
                   , enemySize      = BoundingBox 30 30  
-                  , enemySpeed     = 200 
+                  , enemySpeed     = 300
                   } 
 
 

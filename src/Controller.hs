@@ -11,20 +11,21 @@ import System.Random
 step :: Float -> GameState -> IO GameState
 step secs gstate
     | screen gstate /= Playing || isPaused gstate = return gstate
-    | otherwise = return (moved { bullets = remainingBullets collision
-                                , enemies = remainingEnemies collision
-                                , score = score moved + enemiesDestroyed collision
-                                })
+    | otherwise = do
+        moved <- spawnEnemies secs updated
+        let collision = resolveCollisions (player moved) (bullets moved) (enemies moved)
+        return (moved { bullets = remainingBullets collision
+                      , enemies = remainingEnemies collision
+                      , score = score moved + enemiesDestroyed collision
+                      })
     where
     p = player gstate
     p' = p { playerVelocity = Vector1 (playerdir gstate) }
     gstate' = bulletlist gstate { coolDown = max 0 (coolDown gstate - secs) }
-    moved = spawnEnemies secs
-          (gstate' { player = movePlayer secs p'
-                   , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
-                   , enemies = keepEnemiesInField (applyEnemies secs (enemies gstate'))
-                   })
-    collision = resolveCollisions (player moved) (bullets moved) (enemies moved)
+    updated = gstate' { player = movePlayer secs p'
+                      , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
+                      , enemies = keepEnemiesInField (applyEnemies secs (enemies gstate'))
+                      }
 
 movePlayer :: Float -> Player -> Player
 movePlayer secs p =
@@ -114,24 +115,42 @@ spawnRate Easy = 2.5
 spawnRate Medium = 1.5
 spawnRate Hard = 0.8
 
-spawnEnemies :: Float -> GameState -> GameState
-spawnEnemies secs gs =
-    gs { enemies = enemies gs ++ newEnemies
-       , spawnTimer = timer - fromIntegral numberToSpawn * rate
-       }
+spawnEnemies :: Float -> GameState -> IO GameState
+spawnEnemies secs gs = do
+    newEnemies <- spawnMany numberToSpawn (lastEnemyY (enemies gs))
+    return gs { enemies = enemies gs ++ newEnemies
+              , spawnTimer = timer - fromIntegral numberToSpawn * rate
+              }
     where
     rate = spawnRate (difficulty gs)
     timer = spawnTimer gs + secs
     numberToSpawn = floor (timer / rate) :: Int
-    newEnemies = map (newEnemy (length (enemies gs))) [0 .. numberToSpawn - 1]
 
-newEnemy :: Int -> Int -> Enemy
-newEnemy existingCount index =
+spawnMany :: Int -> Float -> IO [Enemy]
+spawnMany 0 _ = return []
+spawnMany count previousY = do
+    y <- randomSeparatedY previousY
+    rest <- spawnMany (count - 1) y
+    return (newEnemy y : rest)
+
+randomSeparatedY :: Float -> IO Float
+randomSeparatedY previousY = do
+    y <- randomRIO (-250, 250)
+    if abs (y - previousY) >= 50
+       then return y
+       else randomSeparatedY previousY
+
+lastEnemyY :: [Enemy] -> Float
+lastEnemyY [] = 1000
+lastEnemyY es =
+    let Position _ y = enemyPosition (last es)
+    in y
+
+newEnemy :: Float -> Enemy
+newEnemy y =
     kamiEnemy { enemyPosition = Position 350 y
-              , enemySpeed = 300 + fromIntegral (index `mod` 3) * 25
+              , enemySpeed = enemySpeed kamiEnemy
               }
-    where
-    y = fromIntegral (((existingCount + index) * 83) `mod` 500) - 250
 
 keepBulletsInField :: [Bullet] -> [Bullet]
 keepBulletsInField = filter isInField
@@ -176,7 +195,7 @@ updateEnemy = undefined
 moveEnemy :: Float -> Enemy -> Enemy
 moveEnemy secs e =
     let Position x y = enemyPosition e
-        Vector2 vx vy = enemyVelocitiy e
+        Vector2 vx vy = enemyVelocity e
         speed = enemySpeed e
     in e { enemyPosition = Position (x + vx * secs * speed)
                               (y + vy * secs * speed)
@@ -222,7 +241,7 @@ directionTo (Position px py) (Position ex ey) =
 spawnKami :: Position -> Position -> Enemy
 spawnKami startPos targetPos =
     kamiEnemy { enemyPosition = startPos
-              , enemyVelocitiy = directionTo targetPos startPos
+              , enemyVelocity = directionTo targetPos startPos
               }
 
 collides :: (HasBoundingBox a, HasBoundingBox b) => a -> b -> Bool
