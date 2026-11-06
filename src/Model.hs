@@ -127,6 +127,7 @@ data GameState = GameState {
                  , powerUps           :: [PowerUp] 
                  , activePowerUp      :: Maybe PowerUpType 
                  , powerUpTimer       :: Float 
+                 , powerUpSpawnTimer  :: Float 
                  }
 
 data Collision = Collision {
@@ -158,6 +159,8 @@ enemyShootMaxInterval Easy = 5.0
 enemyShootMaxInterval Medium = 3.5
 enemyShootMaxInterval Hard = 2.5
 
+
+
 explosionDuration :: Float
 explosionDuration = 0.15 -- seconds
 
@@ -168,12 +171,6 @@ kamiEnemy = Enemy { enemyPosition  = Position (fieldRight - 15) 0
                   , enemySpeed     = 200
                   , enemyType      = StraightEnemy
                   } 
-
-testShield :: PowerUp 
-testShield = PowerUp Shield (Position (-350) 100) 10 
-
-testRapid :: PowerUp 
-testRapid = PowerUp RapidFire (Position (-350) 50) 10 
 
 initialState :: GameState
 initialState = GameState { 
@@ -195,9 +192,10 @@ initialState = GameState {
                , isPaused = False
                , difficulty = Easy
                , highScores = [0, 0, 0]
-               , powerUps = [testShield, testRapid] 
+               , powerUps = [] 
                , activePowerUp = Nothing 
                , powerUpTimer = 0 
+               , powerUpSpawnTimer = 8 
                }
 
 highscoreFile :: FilePath

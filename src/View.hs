@@ -89,3 +89,6 @@ drawPowerUp pw = let
                  Position x y = powerUpPosition pw 
                  pwColor = if powerUpType pw == Shield then blue else green 
                  in translate x y $ color pwColor $ circleSolid 11 
+
+
+

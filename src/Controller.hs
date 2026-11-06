@@ -13,7 +13,8 @@ step :: Float -> GameState -> IO GameState
 step secs gstate
     | screen gstate /= Playing || isPaused gstate = return gstate
     | otherwise = do
-        moved <- spawnEnemies secs updated
+        withPowerUps <- spawnPowerUps secs updated 
+        moved <- spawnEnemies secs withPowerUps
         shooting <- spawnEnemyBullets secs moved
         let (collected, remaining) = 
                 collectPowerUps (player shooting) (powerUps shooting)                                                          
@@ -53,6 +54,7 @@ step secs gstate
                       , enemies = keepEnemiesInField
                           (applyEnemies secs (py (playerPosition (player gstate'))) (enemies gstate'))
                       , explosions = updateExplosions secs (explosions gstate')
+                      , powerUps = updatePowerUps secs (powerUps gstate') 
                       }
 
 movePlayer :: Float -> Player -> Player
@@ -134,6 +136,8 @@ startGame selectedDifficulty gs =
        , difficulty = selectedDifficulty
        , activePowerUp = Nothing 
        , powerUpTimer = 0 
+       , powerUpSpawnTimer = 8 
+       , powerUps = [] 
        }
 
 updateHighScore :: GameState -> GameState
@@ -213,6 +217,11 @@ randomSpawnInterval :: Difficulty -> IO Float
 randomSpawnInterval Easy = randomRIO (2.0, 4.0)
 randomSpawnInterval Medium = randomRIO (1.0, 2.5)
 randomSpawnInterval Hard = randomRIO (0.4, 1.2)
+
+randomPowerUpInterval :: Difficulty -> IO Float 
+randomPowerUpInterval Easy = randomRIO (8.0, 12.0) 
+randomPowerUpInterval Medium = randomRIO (12.0, 18.0) 
+randomPowerUpInterval Hard = randomRIO (18.0, 25.0) 
 
 randomSeparatedY :: Float -> IO Float
 randomSeparatedY previousY = do
@@ -391,4 +400,23 @@ tickPowerUp secs gs =
                 if t == 0 then Nothing else activePowerUp gs 
           } 
 
+updatePowerUps :: Float -> [PowerUp] -> [PowerUp] 
+updatePowerUps secs = filter ((> 0) . powerUpLifeTime) . map (\pu -> pu { powerUpLifeTime = powerUpLifeTime pu - secs }) 
 
+spawnPowerUps :: Float -> GameState -> IO GameState 
+spawnPowerUps secs gs = let 
+                    timer = powerUpSpawnTimer gs - secs 
+                    in if timer > 0 
+                        then return gs { powerUpSpawnTimer = timer }
+                        else do 
+                        y <- randomRIO (fieldBottom + 25, fieldTop - 25) 
+                        isShield <- randomRIO (False, True) 
+                        nextInterval <- randomPowerUpInterval (difficulty gs) 
+
+                        let puType = if isShield then Shield else RapidFire 
+                            pos = Position (px (playerPosition (player gs))) y 
+                            pu = PowerUp puType pos 5 
+
+                        return gs { powerUps = pu : powerUps gs 
+                                  , powerUpSpawnTimer = nextInterval 
+                                  } 
