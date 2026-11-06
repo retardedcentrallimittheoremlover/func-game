@@ -270,9 +270,6 @@ bulletlist gs
 applyBullet :: Float -> [Bullet] -> [Bullet]
 applyBullet secs = filter ((>= 0) . bulletLifetime) . map (moveBullet secs)
 
-updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen)
-updateEnemy = undefined
-
 moveEnemy :: Float -> Float -> Enemy -> Enemy
 moveEnemy secs playerY e =
     let Position x y = enemyPosition e
