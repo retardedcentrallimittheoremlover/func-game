@@ -18,3 +18,5 @@ cabal run
 ### Objectives
 - Shoot the enemies to gain points.
 - Avoid the enemies and their bullets to prevent losing the game.
+- A blue circle is a shield powerup which shields you from enemies 
+- A green circle is a rapidfire powerup which makes you shoot more bullets 
