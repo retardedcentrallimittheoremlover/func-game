@@ -21,6 +21,7 @@ fieldBorder = color (greyN 0.6)
 gameView :: GameState -> [Picture]
 gameView gstate = [drawPlayer (player gstate), scoreView (score gstate)]
                 ++ map drawBullet (bullets gstate)
+                ++ map drawEnemyBullet (enemyBullets gstate)
                 ++ map drawEnemy (enemies gstate)
                 ++ map drawExplosion (explosions gstate)
 
@@ -60,6 +61,11 @@ drawBullet :: Bullet -> Picture
 drawBullet b = let 
                Position x y = bulletPosition b 
                in translate x y $ color yellow $ circleSolid 8 
+
+drawEnemyBullet :: Bullet -> Picture
+drawEnemyBullet b =
+    let Position x y = bulletPosition b
+    in translate x y $ color orange (circleSolid 8)
 
 drawEnemy :: Enemy -> Picture 
 drawEnemy e = let 

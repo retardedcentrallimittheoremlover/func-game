@@ -95,11 +95,14 @@ data GameState = GameState {
                  , keyDownDown  :: Bool 
                  , keySpaceDown :: Bool 
                  , bullets      :: [Bullet] 
+                 , enemyBullets  :: [Bullet]
                  , coolDown     :: Float 
                  , enemies      :: [Enemy] 
                  , explosions   :: [Explosion]
                  , spawnTimer   :: Float
                  , spawnInterval :: Float
+                 , enemyShootTimer :: Float
+                 , enemyShootInterval :: Float
                  , score        :: Int
                  , screen       :: Screen
                  , isPaused     :: Bool
@@ -110,6 +113,7 @@ data GameState = GameState {
 data Collision = Collision {
                     remainingEnemies :: [Enemy] 
                   , remainingBullets :: [Bullet] 
+                  , remainingEnemyBullets :: [Bullet]
                   , explosionsCreated :: [Explosion]
                   , playerWasHit     :: Bool 
                   , enemiesDestroyed :: Int 
@@ -123,6 +127,17 @@ defaultPlayer = Player { playerPosition = Position (fieldLeft + 25) 0
 bulletSpeed :: Float 
 bulletSpeed = 500 
 
+enemyBulletSpeed :: Float
+enemyBulletSpeed = 300
+
+enemyShootMinInterval, enemyShootMaxInterval :: Difficulty -> Float
+enemyShootMinInterval Easy = 3.0
+enemyShootMinInterval Medium = 2.0
+enemyShootMinInterval Hard = 1.5
+enemyShootMaxInterval Easy = 5.0
+enemyShootMaxInterval Medium = 3.5
+enemyShootMaxInterval Hard = 2.5
+
 explosionDuration :: Float
 explosionDuration = 0.15 -- seconds
 
@@ -130,7 +145,7 @@ kamiEnemy :: Enemy
 kamiEnemy = Enemy { enemyPosition = Position (fieldRight - 15) 0
                   , enemyVelocity = Vector2 (-1) 0
                   , enemySize      = BoundingBox 30 30  
-                  , enemySpeed     = 300
+                  , enemySpeed     = 200
                   } 
 
 
@@ -141,11 +156,14 @@ initialState = GameState {
                , keyDownDown = False
                , keySpaceDown = False 
                , bullets = [] 
+               , enemyBullets = []
                , coolDown = 0
                , enemies = [kamiEnemy] 
                , explosions = []
                , spawnTimer = 0
                , spawnInterval = 0
+               , enemyShootTimer = 0
+               , enemyShootInterval = 0
                , score = 0
                , screen = Menu
                , isPaused = False

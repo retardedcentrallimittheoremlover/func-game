@@ -13,12 +13,17 @@ step secs gstate
     | screen gstate /= Playing || isPaused gstate = return gstate
     | otherwise = do
         moved <- spawnEnemies secs updated
-        let collision = resolveCollisions (player moved) (bullets moved) (enemies moved)
-            nextState = moved { bullets = remainingBullets collision
-                              , enemies = remainingEnemies collision
-                              , explosions = explosions moved ++ explosionsCreated collision
-                              , score = score moved + enemiesDestroyed collision
-                              }
+        shooting <- spawnEnemyBullets secs moved
+        let collision = resolveCollisions (player shooting)
+                                           (bullets shooting)
+                                           (enemyBullets shooting)
+                                           (enemies shooting)
+            nextState = shooting { bullets = remainingBullets collision
+                                 , enemyBullets = remainingEnemyBullets collision
+                                 , enemies = remainingEnemies collision
+                                 , explosions = explosions shooting ++ explosionsCreated collision
+                                 , score = score shooting + enemiesDestroyed collision
+                                 }
         if playerWasHit collision
            then do
                let gameOverState = updateHighScore nextState
@@ -37,6 +42,8 @@ step secs gstate
     gstate' = bulletlist gstate { coolDown = max 0 (coolDown gstate - secs) }
     updated = gstate' { player = movePlayer secs p'
                       , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
+                      , enemyBullets = keepBulletsInField
+                          (applyBullet secs (enemyBullets gstate'))
                       , enemies = keepEnemiesInField (applyEnemies secs (enemies gstate'))
                       , explosions = updateExplosions secs (explosions gstate')
                       }
@@ -106,11 +113,14 @@ startGame selectedDifficulty gs =
        , keyDownDown = False
        , keySpaceDown = False
        , bullets = []
+       , enemyBullets = []
        , explosions = []
        , coolDown = 0
        , enemies = [kamiEnemy]
        , spawnTimer = 0
        , spawnInterval = 0
+       , enemyShootTimer = 0
+       , enemyShootInterval = 0
        , score = 0
        , screen = Playing
        , isPaused = False
@@ -135,6 +145,33 @@ replaceAt index value values =
 
 spawnEnemies :: Float -> GameState -> IO GameState
 spawnEnemies secs gs = spawnDue (spawnTimer gs + secs) (spawnInterval gs) gs
+
+spawnEnemyBullets :: Float -> GameState -> IO GameState
+spawnEnemyBullets secs gs = do
+    interval <- if enemyShootInterval gs > 0
+                   then return (enemyShootInterval gs)
+                   else randomShootInterval (difficulty gs)
+    let timer = enemyShootTimer gs + secs
+    if timer < interval
+       then return gs { enemyShootTimer = timer
+                      , enemyShootInterval = interval
+                      }
+       else do
+           nextInterval <- randomShootInterval (difficulty gs)
+           let newBullets = map enemyBullet (enemies gs)
+           return gs { enemyBullets = enemyBullets gs ++ newBullets
+                     , enemyShootTimer = timer - interval
+                     , enemyShootInterval = nextInterval
+                     }
+
+randomShootInterval :: Difficulty -> IO Float
+randomShootInterval difficulty =
+    randomRIO (enemyShootMinInterval difficulty, enemyShootMaxInterval difficulty)
+
+enemyBullet :: Enemy -> Bullet
+enemyBullet enemy =
+    let Position x y = enemyPosition enemy
+    in Bullet (Position x y) (Vector2 (-enemyBulletSpeed) 0) 10
 
 spawnDue :: Float -> Float -> GameState -> IO GameState
 spawnDue timer interval gs = do
@@ -256,15 +293,17 @@ playerHit p = any (`collides` p)
 enemyHitPlayer :: Enemy -> Player -> Bool
 enemyHitPlayer = collides
 
-resolveCollisions :: Player -> [Bullet] -> [Enemy] -> Collision
-resolveCollisions p bs es =
+resolveCollisions :: Player -> [Bullet] -> [Bullet] -> [Enemy] -> Collision
+resolveCollisions p bs enemyBs es =
     let rb = removeHitBullets bs es
         bulletHitEnemies = filter (\e -> any (`bulletHitsEnemy` e) bs) es
         re = removeEnemiesHitPlayer p (removeHitEnemies bs es)
-        ph = playerHit p es
+        remainingEnemyBs = filter (not . collides p) enemyBs
+        ph = playerHit p es || any (collides p) enemyBs
         n = length es - length (removeHitEnemies bs es)
     in Collision { remainingEnemies = re
                  , remainingBullets = rb
+                 , remainingEnemyBullets = remainingEnemyBs
                  , explosionsCreated = map explosionFor bulletHitEnemies
                  , playerWasHit = ph
                  , enemiesDestroyed = n
