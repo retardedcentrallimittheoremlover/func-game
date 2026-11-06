@@ -15,11 +15,16 @@ step secs gstate
     | otherwise = do
         moved <- spawnEnemies secs updated
         shooting <- spawnEnemyBullets secs moved
-        let collision = resolveCollisions (player shooting)
-                                           (bullets shooting)
-                                           (enemyBullets shooting)
-                                           (enemies shooting)
-            nextState = shooting { bullets = remainingBullets collision
+        let (collected, remaining) = 
+                collectPowerUps (player shooting) (powerUps shooting)                                                          
+            afterCollect = shooting { powerUps = remaining } 
+            powered = foldl (\gs pu -> activatePowerUp (powerUpType pu) gs) afterCollect collected 
+
+            collision = resolveCollisions (player powered)
+                                           (bullets powered)
+                                           (enemyBullets powered)
+                                           (enemies powered)
+            nextState = powered  { bullets = remainingBullets collision
                                  , enemyBullets = remainingEnemyBullets collision
                                  , enemies = remainingEnemies collision
                                  , explosions = explosions shooting ++ explosionsCreated collision
@@ -40,7 +45,7 @@ step secs gstate
     where
     p = player gstate
     p' = p { playerVelocity = Vector1 (playerdir gstate) }
-    gstate' = bulletlist gstate { coolDown = max 0 (coolDown gstate - secs) }
+    gstate' = bulletlist $ tickPowerUp secs $ gstate { coolDown = max 0 (coolDown gstate - secs) }
     updated = gstate' { player = movePlayer secs p'
                       , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
                       , enemyBullets = keepBulletsInField
@@ -127,6 +132,8 @@ startGame selectedDifficulty gs =
        , screen = Playing
        , isPaused = False
        , difficulty = selectedDifficulty
+       , activePowerUp = Nothing 
+       , powerUpTimer = 0 
        }
 
 updateHighScore :: GameState -> GameState
@@ -264,7 +271,7 @@ bulletlist :: GameState -> GameState
 bulletlist gs
     | keySpaceDown gs && coolDown gs <= 0 =
         gs { bullets = spawnBullet (player gs) 2 : bullets gs
-           , coolDown = 0.2
+           , coolDown = fireInterval gs 
            }
     | otherwise = gs
 
@@ -373,8 +380,15 @@ isShieldActive gs | activePowerUp gs == Just Shield && powerUpTimer gs > 0 = Tru
                   | otherwise = False 
 
 fireInterval :: GameState -> Float 
-fireInterval gs | isShieldActive gs = 0.08 
+fireInterval gs | activePowerUp gs == Just RapidFire && powerUpTimer gs > 0 = 0.08 
+                | otherwise = 0.2 
                 
-
+tickPowerUp :: Float -> GameState -> GameState 
+tickPowerUp secs gs = 
+    let t = max 0 (powerUpTimer gs - secs) 
+    in gs { powerUpTimer = t 
+          , activePowerUp = 
+                if t == 0 then Nothing else activePowerUp gs 
+          } 
 
 

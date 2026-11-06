@@ -24,6 +24,7 @@ gameView gstate = [drawPlayer (player gstate), scoreView (score gstate)]
                 ++ map drawEnemyBullet (enemyBullets gstate)
                 ++ map drawEnemy (enemies gstate)
                 ++ map drawExplosion (explosions gstate)
+                ++ map drawPowerUp (powerUps gstate) 
 
 menuView :: GameState -> Picture
 menuView gstate = pictures
@@ -65,7 +66,7 @@ drawBullet b = let
 drawEnemyBullet :: Bullet -> Picture
 drawEnemyBullet b =
     let Position x y = bulletPosition b
-    in translate x y $ color orange (circleSolid 8)
+    in translate x y $ color orange $ circleSolid 8
 
 drawEnemy :: Enemy -> Picture 
 drawEnemy e = let 
@@ -82,3 +83,9 @@ drawExplosion explosion =
         [ color orange (circleSolid radius)
         , color yellow (circleSolid (radius * 0.66))
         ]
+
+drawPowerUp :: PowerUp -> Picture 
+drawPowerUp pw = let 
+                 Position x y = powerUpPosition pw 
+                 pwColor = if powerUpType pw == Shield then blue else green 
+                 in translate x y $ color pwColor $ circleSolid 11 

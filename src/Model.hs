@@ -169,6 +169,11 @@ kamiEnemy = Enemy { enemyPosition  = Position (fieldRight - 15) 0
                   , enemyType      = StraightEnemy
                   } 
 
+testShield :: PowerUp 
+testShield = PowerUp Shield (Position (-350) 100) 10 
+
+testRapid :: PowerUp 
+testRapid = PowerUp RapidFire (Position (-350) 50) 10 
 
 initialState :: GameState
 initialState = GameState { 
@@ -190,7 +195,7 @@ initialState = GameState {
                , isPaused = False
                , difficulty = Easy
                , highScores = [0, 0, 0]
-               , powerUps = [] 
+               , powerUps = [testShield, testRapid] 
                , activePowerUp = Nothing 
                , powerUpTimer = 0 
                }
