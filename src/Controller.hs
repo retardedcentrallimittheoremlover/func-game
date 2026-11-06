@@ -7,6 +7,7 @@ import Model
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import System.Random
+import Data.List 
 
 step :: Float -> GameState -> IO GameState
 step secs gstate
@@ -24,7 +25,7 @@ step secs gstate
                                  , explosions = explosions shooting ++ explosionsCreated collision
                                  , score = score shooting + scoreGained collision
                                  }
-        if playerWasHit collision
+        if playerWasHit collision && not (isShieldActive nextState)
            then do
                let gameOverState = updateHighScore nextState
                                      { screen = Menu
@@ -355,3 +356,25 @@ getEdges a =
     let Position x y = objectPosition a
         BoundingBox w h = boundingBox a
     in (x - w / 2, x + w / 2, y - h / 2, y + h / 2)
+
+collectPowerUps :: Player -> [PowerUp] -> ([PowerUp], [PowerUp]) 
+collectPowerUps p ups = partition (collides p) ups 
+
+activatePowerUp :: PowerUpType -> GameState -> GameState 
+activatePowerUp Shield gs = gs { activePowerUp = Just Shield
+                               , powerUpTimer = 5 
+                               }   
+activatePowerUp RapidFire gs = gs { activePowerUp = Just RapidFire
+                                  , powerUpTimer = 3 
+                                  } 
+
+isShieldActive :: GameState -> Bool 
+isShieldActive gs | activePowerUp gs == Just Shield && powerUpTimer gs > 0 = True 
+                  | otherwise = False 
+
+fireInterval :: GameState -> Float 
+fireInterval gs | isShieldActive gs = 0.08 
+                
+
+
+

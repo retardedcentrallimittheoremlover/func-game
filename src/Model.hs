@@ -68,6 +68,10 @@ instance HasBoundingBox Player where
     boundingBox    _ = BoundingBox 30 30
     objectPosition p = playerPosition p
 
+instance HasBoundingBox PowerUp where 
+    boundingBox _ = BoundingBox 24 24 
+    objectPosition pw = powerUpPosition pw 
+
 data Position = Position { px :: Float, py :: Float} 
 
 data Bullet = Bullet { bulletPosition :: Position
@@ -79,8 +83,17 @@ data Player = Player { playerPosition :: Position
                      , playerVelocity :: Vector1
                      }
 
+data PowerUpType = Shield | RapidFire 
+    deriving (Eq, Show) 
+
+data PowerUp = PowerUp { powerUpType     :: PowerUpType 
+                       , powerUpPosition :: Position 
+                       , powerUpLifeTime :: Float 
+                       }
+
 data EnemyType = StraightEnemy | TrackingEnemy
                 deriving (Eq, Show)
+
 data Enemy = Enemy { enemyPosition :: Position
                    , enemyVelocity :: Vector2
                    , enemySize     :: BoundingBox
@@ -111,6 +124,9 @@ data GameState = GameState {
                  , isPaused           :: Bool
                  , difficulty         :: Difficulty
                  , highScores         :: [Int]
+                 , powerUps           :: [PowerUp] 
+                 , activePowerUp      :: Maybe PowerUpType 
+                 , powerUpTimer       :: Float 
                  }
 
 data Collision = Collision {
@@ -174,6 +190,9 @@ initialState = GameState {
                , isPaused = False
                , difficulty = Easy
                , highScores = [0, 0, 0]
+               , powerUps = [] 
+               , activePowerUp = Nothing 
+               , powerUpTimer = 0 
                }
 
 highscoreFile :: FilePath
