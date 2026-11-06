@@ -22,7 +22,7 @@ step secs gstate
                                  , enemyBullets = remainingEnemyBullets collision
                                  , enemies = remainingEnemies collision
                                  , explosions = explosions shooting ++ explosionsCreated collision
-                                 , score = score shooting + enemiesDestroyed collision
+                                 , score = score shooting + scoreGained collision
                                  }
         if playerWasHit collision
            then do
@@ -44,7 +44,8 @@ step secs gstate
                       , bullets = keepBulletsInField (applyBullet secs (bullets gstate'))
                       , enemyBullets = keepBulletsInField
                           (applyBullet secs (enemyBullets gstate'))
-                      , enemies = keepEnemiesInField (applyEnemies secs (enemies gstate'))
+                      , enemies = keepEnemiesInField
+                          (applyEnemies secs (py (playerPosition (player gstate'))) (enemies gstate'))
                       , explosions = updateExplosions secs (explosions gstate')
                       }
 
@@ -179,17 +180,26 @@ spawnDue timer interval gs = do
                        then return interval
                        else randomSpawnInterval (difficulty gs)
     if timer < nextInterval
-       then return gs { spawnTimer = timer
-                      , spawnInterval = nextInterval
-                      }
+       then return (gs { spawnTimer = timer
+                       , spawnInterval = nextInterval
+                       })
        else do
-        y <- randomSeparatedY (lastEnemyY (enemies gs))
-        next <- randomSpawnInterval (difficulty gs)
-        spawnDue (timer - nextInterval) next
-            gs { enemies = enemies gs ++ [newEnemy y]
-               , spawnTimer = 0
-               , spawnInterval = 0
-               }
+           y <- randomSeparatedY (lastEnemyY (enemies gs))
+           isTracker <- randomTracker
+           let spawnedEnemy = if isTracker
+                                then newTrackingEnemy (py (playerPosition (player gs)))
+                                else newEnemy y
+           next <- randomSpawnInterval (difficulty gs)
+           spawnDue (timer - nextInterval) next
+               (gs { enemies = enemies gs ++ [spawnedEnemy]
+                   , spawnTimer = 0
+                   , spawnInterval = 0
+                   })
+
+randomTracker :: IO Bool
+randomTracker = do
+       roll <- randomRIO (1 :: Int, 5)
+       return (roll == 1)
 
 randomSpawnInterval :: Difficulty -> IO Float
 randomSpawnInterval Easy = randomRIO (2.0, 4.0)
@@ -213,6 +223,12 @@ newEnemy :: Float -> Enemy
 newEnemy y =
     kamiEnemy { enemyPosition = Position (fieldRight - 15) y
               , enemySpeed = enemySpeed kamiEnemy
+              }
+
+newTrackingEnemy :: Float -> Enemy
+newTrackingEnemy playerY =
+    kamiEnemy { enemyPosition = Position (fieldRight - 15) playerY
+              , enemyType = TrackingEnemy
               }
 
 keepBulletsInField :: [Bullet] -> [Bullet]
@@ -257,17 +273,22 @@ applyBullet secs = filter ((>= 0) . bulletLifetime) . map (moveBullet secs)
 updateEnemy :: Float -> Position -> Enemy -> StdGen -> (Enemy, Maybe Bullet, StdGen)
 updateEnemy = undefined
 
-moveEnemy :: Float -> Enemy -> Enemy
-moveEnemy secs e =
+moveEnemy :: Float -> Float -> Enemy -> Enemy
+moveEnemy secs playerY e =
     let Position x y = enemyPosition e
-        Vector2 vx vy = enemyVelocity e
+        Vector2 vx _ = enemyVelocity e
         speed = enemySpeed e
+        verticalDirection
+            | playerY > y + 5 = 1
+            | playerY < y - 5 = -1
+            | otherwise = 0
+        verticalSpeed = if enemyType e == TrackingEnemy then 80 else 0
     in e { enemyPosition = Position (x + vx * secs * speed)
-                              (y + vy * secs * speed)
+                              (y + verticalDirection * secs * verticalSpeed)
          }
 
-applyEnemies :: Float -> [Enemy] -> [Enemy]
-applyEnemies secs = map (moveEnemy secs)
+applyEnemies :: Float -> Float -> [Enemy] -> [Enemy]
+applyEnemies secs playerY = map (moveEnemy secs playerY)
 
 updateExplosions :: Float -> [Explosion] -> [Explosion]
 updateExplosions secs =
@@ -301,15 +322,20 @@ resolveCollisions p bs enemyBs es =
         remainingEnemyBs = filter (not . collides p) enemyBs
         ph = playerHit p es || any (collides p) enemyBs
         n = length es - length (removeHitEnemies bs es)
+        points = sum (map enemyPoints bulletHitEnemies)
     in Collision { remainingEnemies = re
                  , remainingBullets = rb
                  , remainingEnemyBullets = remainingEnemyBs
                  , explosionsCreated = map explosionFor bulletHitEnemies
                  , playerWasHit = ph
                  , enemiesDestroyed = n
+                 , scoreGained = points
                  }
     where
     explosionFor enemy = Explosion (enemyPosition enemy) explosionDuration
+    enemyPoints enemy
+        | enemyType enemy == TrackingEnemy = 2
+        | otherwise = 1
 
 directionTo :: Position -> Position -> Vector2
 directionTo (Position px py) (Position ex ey) =

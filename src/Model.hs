@@ -27,10 +27,10 @@ fieldMargin :: Float
 fieldMargin = 10
 
 fieldLeft, fieldRight, fieldBottom, fieldTop :: Float
-fieldLeft = -(windowWidth / 2 - fieldMargin)
-fieldRight = windowWidth / 2 - fieldMargin
+fieldLeft   = -(windowWidth  / 2 - fieldMargin)
+fieldRight  = windowWidth    / 2 - fieldMargin
 fieldBottom = -(windowHeight / 2 - fieldMargin)
-fieldTop = windowHeight / 2 - fieldMargin
+fieldTop    = windowHeight   / 2 - fieldMargin
 
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 5
@@ -48,24 +48,24 @@ normalize :: Vector2 -> Vector2
 normalize v@(Vector2 0 0) = Vector2 1 0 
 normalize v@(Vector2 x y) = let 
                         m = magnitude v 
-                    in scaleV (1/m) v 
+                    in scaleV (1/m) v
 
 data BoundingBox = BoundingBox Float Float  
 
 class HasBoundingBox a where 
-    boundingBox :: a -> BoundingBox 
+    boundingBox    :: a -> BoundingBox
     objectPosition :: a -> Position 
 
 instance HasBoundingBox Enemy where 
-    boundingBox e = enemySize e  
+    boundingBox    e = enemySize e
     objectPosition e = enemyPosition e 
 
 instance HasBoundingBox Bullet where 
-    boundingBox _ = BoundingBox 16 16 
+    boundingBox    _ = BoundingBox 16 16
     objectPosition b = bulletPosition b 
 
 instance HasBoundingBox Player where 
-    boundingBox _ = BoundingBox 30 30 
+    boundingBox    _ = BoundingBox 30 30
     objectPosition p = playerPosition p
 
 data Position = Position { px :: Float, py :: Float} 
@@ -79,10 +79,13 @@ data Player = Player { playerPosition :: Position
                      , playerVelocity :: Vector1
                      }
 
-data Enemy = Enemy { enemyPosition  :: Position 
+data EnemyType = StraightEnemy | TrackingEnemy
+                deriving (Eq, Show)
+data Enemy = Enemy { enemyPosition :: Position
                    , enemyVelocity :: Vector2
-                   , enemySize      :: BoundingBox  
-                   , enemySpeed     :: Float 
+                   , enemySize     :: BoundingBox
+                   , enemySpeed    :: Float
+                   , enemyType     :: EnemyType
                    }
 
 data Explosion = Explosion { explosionPosition :: Position
@@ -90,33 +93,34 @@ data Explosion = Explosion { explosionPosition :: Position
                            }
 
 data GameState = GameState {
-                   player       :: Player  
-                 , keyUpDown    :: Bool
-                 , keyDownDown  :: Bool 
-                 , keySpaceDown :: Bool 
-                 , bullets      :: [Bullet] 
-                 , enemyBullets  :: [Bullet]
-                 , coolDown     :: Float 
-                 , enemies      :: [Enemy] 
-                 , explosions   :: [Explosion]
-                 , spawnTimer   :: Float
-                 , spawnInterval :: Float
-                 , enemyShootTimer :: Float
+                   player             :: Player
+                 , keyUpDown          :: Bool
+                 , keyDownDown        :: Bool
+                 , keySpaceDown       :: Bool
+                 , bullets            :: [Bullet]
+                 , enemyBullets       :: [Bullet]
+                 , coolDown           :: Float
+                 , enemies            :: [Enemy]
+                 , explosions         :: [Explosion]
+                 , spawnTimer         :: Float
+                 , spawnInterval      :: Float
+                 , enemyShootTimer    :: Float
                  , enemyShootInterval :: Float
-                 , score        :: Int
-                 , screen       :: Screen
-                 , isPaused     :: Bool
-                 , difficulty   :: Difficulty
-                 , highScores   :: [Int]
+                 , score              :: Int
+                 , screen             :: Screen
+                 , isPaused           :: Bool
+                 , difficulty         :: Difficulty
+                 , highScores         :: [Int]
                  }
 
 data Collision = Collision {
-                    remainingEnemies :: [Enemy] 
-                  , remainingBullets :: [Bullet] 
+                    remainingEnemies      :: [Enemy]
+                  , remainingBullets      :: [Bullet]
                   , remainingEnemyBullets :: [Bullet]
-                  , explosionsCreated :: [Explosion]
-                  , playerWasHit     :: Bool 
-                  , enemiesDestroyed :: Int 
+                  , explosionsCreated     :: [Explosion]
+                  , playerWasHit          :: Bool
+                  , enemiesDestroyed      :: Int
+                  , scoreGained           :: Int
                   }
 
 defaultPlayer :: Player
@@ -142,10 +146,11 @@ explosionDuration :: Float
 explosionDuration = 0.15 -- seconds
 
 kamiEnemy :: Enemy 
-kamiEnemy = Enemy { enemyPosition = Position (fieldRight - 15) 0
-                  , enemyVelocity = Vector2 (-1) 0
+kamiEnemy = Enemy { enemyPosition  = Position (fieldRight - 15) 0
+                  , enemyVelocity  = Vector2 (-1) 0
                   , enemySize      = BoundingBox 30 30  
                   , enemySpeed     = 200
+                  , enemyType      = StraightEnemy
                   } 
 
 

@@ -70,7 +70,8 @@ drawEnemyBullet b =
 drawEnemy :: Enemy -> Picture 
 drawEnemy e = let 
               Position x y = enemyPosition e 
-              in translate x y $ color red $ rectangleSolid 30 30 
+              enemyColor = if enemyType e == TrackingEnemy then orange else red
+              in translate x y $ color enemyColor $ rectangleSolid 30 30
 
 drawExplosion :: Explosion -> Picture
 drawExplosion explosion =
